@@ -23,15 +23,15 @@ def addUserRole(bot, update):
 @bot.message_handler(commands=['start'])
 def mainMenu(message):
 	if message.userRole == "NaN":
-		registrationHandler(bot)
+		registrationHandler(bot, message)
 	elif message.userRole == "unregistered":
-		bot.send_message(message.chat.id, "Ваша заявка на регистрацию в сервисе ожидает подиверждения, ожидайте ⏳", reply_markup=checkRegistrationStatusKeyboard())
+		bot.send_message(message.chat.id, "Ваша заявка на регистрацию в сервисе ожидает подтверждения, ожидайте ⏳", reply_markup=checkRegistrationStatusKeyboard())
 	elif message.userRole == "employee":
-		bot.reply_to(message, "Employee")
+		bot.send_message(message.chat.id, "Employee")
 	elif message.userRole == "manager":
-		bot.reply_to(message, "Manager")
+		bot.send_message(message.chat.id, "Manager")
 	elif message.userRole == "admin":
-		bot.reply_to(message, "Admin")
+		bot.send_message(message.chat.id, "Admin")
 
 @bot.callback_query_handler(func=lambda call: call.data == "backToMainMenu")
 def backToMainMenu_handler(call):
