@@ -1,4 +1,4 @@
-from utils.db import get_connection
+from utils.db_manager import get_connection
 
 
 def _position_to_text(position_row):

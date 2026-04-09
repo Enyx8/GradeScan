@@ -1,4 +1,4 @@
-from utils.db import get_connection
+from utils.db_manager import get_connection
 
 
 def _normalize_grade(grade_text):

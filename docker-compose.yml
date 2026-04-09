@@ -10,13 +10,24 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d gradescan"]
       interval: 5s
       timeout: 5s
       retries: 10
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: gradescan-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
 
 volumes:
   postgres_data:

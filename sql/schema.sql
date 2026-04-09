@@ -66,3 +66,30 @@ CREATE INDEX IF NOT EXISTS idx_user_telegram_id ON "user"(telegram_id);
 CREATE INDEX IF NOT EXISTS idx_review_attestation_id ON review(attestation_id);
 CREATE INDEX IF NOT EXISTS idx_review_subject_id ON review(subject_id);
 CREATE INDEX IF NOT EXISTS idx_attestation_subject_id ON attestation(subject_id);
+
+CREATE TABLE IF NOT EXISTS grade_matrix (
+    id BIGSERIAL PRIMARY KEY,
+    position_name VARCHAR(50) NOT NULL, -- 'backend', 'frontend', etc.
+    grade VARCHAR(30) NOT NULL,        -- 'Junior', 'Middle', 'Senior'
+    skill_id BIGINT REFERENCES skill(id),
+    required_score DECIMAL(3,2) NOT NULL,
+    UNIQUE(position_name, grade, skill_id)
+);
+
+-- Наполнение базовыми навыками (если их еще нет)
+INSERT INTO skill (name_en, name_ru) VALUES 
+('Postgres', 'Postgres'),
+('Java', 'Java'),
+('Testing', 'Testing'),
+('Soft skills', 'Soft skills')
+ON CONFLICT DO NOTHING;
+
+-- Наполнение матрицы (примерные требования для Backend)
+INSERT INTO grade_matrix (position_name, grade, skill_id, required_score) VALUES
+-- Junior
+('backend', 'Junior', 1, 2.0), ('backend', 'Junior', 2, 2.0), ('backend', 'Junior', 3, 1.5), ('backend', 'Junior', 4, 2.0),
+-- Middle
+('backend', 'Middle', 1, 3.5), ('backend', 'Middle', 2, 3.5), ('backend', 'Middle', 3, 3.0), ('backend', 'Middle', 4, 3.5),
+-- Senior
+('backend', 'Senior', 1, 4.5), ('backend', 'Senior', 2, 4.5), ('backend', 'Senior', 3, 4.0), ('backend', 'Senior', 4, 4.5)
+ON CONFLICT DO NOTHING;
