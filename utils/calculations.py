@@ -1,4 +1,44 @@
-from utils.db_manager import get_connection
+from utils.db_connect import get_connection
+
+def get_anomaly_status(subject_id, skill_id, new_score):
+    """
+    Бизнес-логика определения аномалии.
+    Объединяет историю и текущее мнение команды.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. Получаем историю (прошлые аттестации)
+            cursor.execute("""
+                SELECT AVG(r.score) FROM review r
+                JOIN attestation a ON r.attestation_id = a.id
+                WHERE r.subject_id = %s AND r.skill_id = %s 
+                AND a.status = 'completed' AND r.score IS NOT NULL
+            """, (subject_id, skill_id))
+            avg_old = cursor.fetchone()[0]
+            
+            # 2. Получаем текущий срез (другие оценки в этой сессии)
+            cursor.execute("""
+                SELECT AVG(score) FROM review 
+                WHERE subject_id = %s AND skill_id = %s 
+                AND score IS NOT NULL
+            """, (subject_id, skill_id))
+            avg_curr = cursor.fetchone()[0]
+
+            # 3. Вычисляем "эталон" по твоей идее
+            if avg_old is not None and avg_curr is not None:
+                reference = (float(avg_old) + float(avg_curr)) / 2
+            elif avg_old is not None:
+                reference = float(avg_old)
+            elif avg_curr is not None:
+                reference = float(avg_curr)
+            else:
+                return False # Сравнивать не с чем
+
+            diff = abs(reference - float(new_score))
+            return diff > 2.0
+    finally:
+        conn.close()
 
 def calculate_grade_conclusion(subject_id):
     """

@@ -15,8 +15,7 @@ def team_report(message):
                 bot.send_message(message.chat.id, "Вы не зарегистрированы как менеджер.")
                 return
             t_id = res[0]
-            
-            # Получаем список сотрудников и кол-во аномалий
+
             query = """
                 SELECT u.id, u.last_name, u.first_name, u.grade,
                 (SELECT COUNT(*) FROM review r WHERE r.subject_id = u.id AND r.is_strange = TRUE) as anomalies
@@ -59,7 +58,7 @@ def detailed_report(call):
         bot.send_message(call.message.chat.id, f"У сотрудника {u_info[0]} пока нет оценок.")
         return
 
-    report = f"📊 **ОТЧЕТ АТТЕСТАЦИИ: {u_info[0]} {u_info[1]}**\n\n"
+    report = f"📊 **Отчёт по последней аттестации: {u_info[0]} {u_info[1]}**\n\n"
     report += f"🔹 Текущий грейд: `{u_info[2]}`\n"
     report += f"🔹 Позиция: `{result['position'].upper()}`\n"
     report += "──────────────────\n"
@@ -72,10 +71,8 @@ def detailed_report(call):
     
     if result['recommended_grade'] == u_info[2]:
         report += "\n✅ Сотрудник соответствует текущему грейду."
-    elif result['recommended_grade'] == "Senior" and u_info[2] != "Senior":
-        report += "\n🔥 Рекомендовано повышение!"
-    elif result['recommended_grade'] == "Middle" and u_info[2] == "Junior":
-        report += "\n🔥 Рекомендовано повышение до Middle!"
+    elif result['recommended_grade'] != u_info[2]:
+        report += f"\n🔥 Рекомендовано повышение до {result["recommended_grade"]}"
     
     bot.send_message(call.message.chat.id, report, parse_mode="Markdown")
     bot.answer_callback_query(call.id)

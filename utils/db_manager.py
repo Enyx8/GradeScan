@@ -1,18 +1,6 @@
-import os
-import psycopg2
+from utils.db_connect import get_connection
 from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
-
-load_dotenv()
-
-def get_connection():
-    return psycopg2.connect(
-        dbname=os.getenv("DB_NAME", "gradescan"),
-        user=os.getenv("DB_USER", "postgres"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST", "localhost"),
-        port=os.getenv("DB_PORT", "5432"),
-    )
+from utils.calculations import get_anomaly_status
 
 def check_database_connection():
     conn = get_connection()
@@ -67,32 +55,39 @@ def save_review(reviewer_tg_id, subject_id, skill_id, score):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            # Получаем ID ревьюера
             cursor.execute('SELECT id FROM "user" WHERE telegram_id = %s', (reviewer_tg_id,))
             reviewer_id = cursor.fetchone()[0]
             
-            cursor.execute('SELECT id FROM attestation WHERE subject_id = %s AND status = \'in_progress\' LIMIT 1', (subject_id,))
+            # Получаем/создаем аттестацию
+            cursor.execute("SELECT id FROM attestation WHERE subject_id = %s AND status = 'in_progress' LIMIT 1", (subject_id,))
             att_res = cursor.fetchone()
             if not att_res:
-                cursor.execute('INSERT INTO attestation (subject_id, period) VALUES (%s, %s) RETURNING id', (subject_id, 'April 2026'))
+                cursor.execute("INSERT INTO attestation (subject_id, period) VALUES (%s, 'April 2026') RETURNING id", (subject_id,))
                 att_id = cursor.fetchone()[0]
             else:
                 att_id = att_res[0]
 
+            # ЛОГИКА ТЕПЕРЬ ТУТ:
             if score == "undecided":
-                val_score = None
-                is_strange = False
+                val_score, is_strange = None, False
             else:
                 val_score = int(score)
-                is_strange, _ = check_anomaly(subject_id, skill_id, val_score)
+                # Вызываем расчет из внешнего файла
+                is_strange = get_anomaly_status(subject_id, skill_id, val_score)
 
-            query = """
+            # Сохраняем
+            cursor.execute("""
                 INSERT INTO review (attestation_id, reviewer_id, subject_id, skill_id, score, is_strange)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (attestation_id, reviewer_id, subject_id, skill_id) 
                 DO UPDATE SET score = EXCLUDED.score, is_strange = EXCLUDED.is_strange
-            """
-            cursor.execute(query, (att_id, reviewer_id, subject_id, skill_id, val_score, is_strange))
+            """, (att_id, reviewer_id, subject_id, skill_id, val_score, is_strange))
+            
         conn.commit()
         return True
+    except Exception as e:
+        print(f"[DB] Save error: {e}")
+        return False
     finally:
         conn.close()

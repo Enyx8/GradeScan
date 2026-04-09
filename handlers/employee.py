@@ -17,7 +17,7 @@ def show_profile(message):
 def list_colleagues(message):
     members = get_team_members(message.from_user.id)
     if not members:
-        bot.send_message(message.chat.id, "В вашей команде пока нет никого, кроме вас.")
+        bot.send_message(message.chat.id, "В Вашей команде пока нет никого, кроме вас.")
         return
     bot.send_message(message.chat.id, "Выберите коллегу для оценки:", reply_markup=colleague_list_keyboard(members))
 
@@ -28,7 +28,15 @@ def back_to_team(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("sel_user:"))
 def select_skills(call):
-    user_id = call.data.split(":")[1]
+    user_id = int(call.data.split(":")[1])
+    # Проверяем прогресс
+    members = get_team_members(call.from_user.id)
+    target = next((m for m in members if m['id'] == user_id), None)
+    
+    if target and target['skills_rated'] >= 4:
+        bot.answer_callback_query(call.id, "✅ Все оценки для этого коллеги уже выставлены!")
+        return
+
     bot.edit_message_text("Выберите компетенцию для оценки:", call.message.chat.id, call.message.message_id, reply_markup=skills_keyboard(user_id))
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("sel_skill:"))
