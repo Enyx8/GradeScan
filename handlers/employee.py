@@ -3,16 +3,6 @@ from keyboards import colleague_list_keyboard, skills_keyboard, score_keyboard
 from utils.db_manager import get_team_members, save_review
 from utils.getUserProfile import getUserProfile
 
-@bot.message_handler(func=lambda m: m.text == "Профиль")
-def show_profile(message):
-    p = getUserProfile(message.from_user.id)
-    if not p:
-        bot.send_message(message.chat.id, "Профиль не найден. Пройдите регистрацию /start")
-        return
-    text = (f"Твой профиль:\nФИО: {p['last_name']} {p['first_name']}\n"
-            f"Команда: {p['team_name']}\nГрейд: {p['grade']}\nПозиция: {p['position']}")
-    bot.send_message(message.chat.id, text)
-
 @bot.message_handler(func=lambda m: m.text == "Оценить коллег")
 def list_colleagues(message):
     members = get_team_members(message.from_user.id)

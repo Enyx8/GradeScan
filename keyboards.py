@@ -5,7 +5,7 @@ def main_menu_keyboard(role):
     if role == 'manager':
         markup.add("Сотрудники команды", "Профиль")
     else:
-        markup.add("Оценить коллег", "Профиль")
+        markup.add("Оценить коллег")
     return markup
 
 def colleague_list_keyboard(members):
