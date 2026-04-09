@@ -3,8 +3,6 @@ from dotenv import load_dotenv
 import os
 from telebot import apihelper
 from utils.getUserRole import getUserRole
-from handlers.registration import registrationHandler
-from keyboards.checkRegistrationStatusKeyboard import checkRegistrationStatusKeyboard
 
 load_dotenv()
 apihelper.ENABLE_MIDDLEWARE = True
@@ -22,11 +20,7 @@ def addUserRole(bot, update):
 
 @bot.message_handler(commands=['start'])
 def mainMenu(message):
-	if message.userRole == "NaN":
-		registrationHandler(bot, message)
-	elif message.userRole == "unregistered":
-		bot.send_message(message.chat.id, "Ваша заявка на регистрацию в сервисе ожидает подтверждения, ожидайте ⏳", reply_markup=checkRegistrationStatusKeyboard())
-	elif message.userRole == "employee":
+	if message.userRole == "employee":
 		bot.send_message(message.chat.id, "Employee")
 	elif message.userRole == "manager":
 		bot.send_message(message.chat.id, "Manager")
