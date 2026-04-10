@@ -9,7 +9,7 @@ def main_menu_keyboard(role):
         markup.row("Сотрудники команды", "Профиль")
         markup.add("Оценить коллег")
     else:
-        markup.add("Оценить коллег")
+        markup.row("Оценить коллег", "Профиль")
     return markup
 
 def colleague_list_keyboard(members):

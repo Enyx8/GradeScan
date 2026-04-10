@@ -36,20 +36,24 @@ def team_report(message):
             text = (
                 "📋 **Сотрудники вашей команды:**\n\n"
                 "_✅ Ок — по сотруднику уже есть нормальные оценки для отчёта; "
-                "⏳ — как в отчёте: «пока нет оценок»; ⚠️ — есть отмеченные аномалии._\n\n"
+                "⏳ — пока нет оценок; ⚠️ — есть отмеченные аномалии._\n\n"
             )
             markup = types.InlineKeyboardMarkup()
             for m in members:
                 anomalies = m[4]
                 usable_scores = m[5] or 0
                 if usable_scores == 0:
-                    status_text = " (⏳ Нет оценок)"
+                    status_text = " (⏳ Пока нет оценок)"
                 elif anomalies > 0:
                     status_text = f" (⚠️ {anomalies} аном.)"
                 else:
                     status_text = " (✅ Ок)"
                 text += f"• {m[1]} {m[2]} — `{m[3]}`{status_text}\n"
-                markup.add(types.InlineKeyboardButton(f"📊 Отчет: {m[1]}", callback_data=f"mgr_rpt:{m[0]}"))
+                full_name = f"{m[1]} {m[2]}".strip()
+                btn_label = f"📊 Отчёт: {full_name}"
+                if len(btn_label) > 64:
+                    btn_label = btn_label[:61] + "…"
+                markup.add(types.InlineKeyboardButton(btn_label, callback_data=f"mgr_rpt:{m[0]}"))
             
             bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
     finally:
@@ -84,11 +88,24 @@ def detailed_report(call):
     
     report += "──────────────────\n"
     report += f"🚀 Рекомендация системы: **{result['recommended_grade']}**\n"
-    
-    if result['recommended_grade'] == u_info[2]:
-        report += "\n✅ Сотрудник соответствует текущему грейду."
-    elif result['recommended_grade'] != u_info[2]:
-        report += f"\n🔥 Рекомендовано повышение до {result['recommended_grade']}"
+
+    cur = u_info[2]
+    rec = result["recommended_grade"]
+    rank = {"Intern": 0, "Junior": 1, "Middle": 2, "Senior": 3, "Lead": 4}
+    r_cur = rank.get(cur, 1)
+    r_rec = rank.get(rec, 0)
+
+    if rec == cur:
+        report += "\n✅ Сотрудник соответствует текущему грейду (по матрице компетенций)."
+    elif r_rec > r_cur:
+        report += f"\n🔥 Рекомендовано повышение до **{rec}**."
+    elif r_rec < r_cur:
+        report += (
+            f"\n⚠️ По матрице ближе к уровню **{rec}**, чем к текущему **{cur}**. "
+            "Это не повышение: при низких оценках стоит пересмотреть соответствие грейду."
+        )
+    else:
+        report += f"\n📌 Сравните рекомендацию **{rec}** с текущим грейдом **{cur}** на кадровой встрече."
     
     bot.send_message(call.message.chat.id, report, parse_mode="Markdown")
     bot.answer_callback_query(call.id)

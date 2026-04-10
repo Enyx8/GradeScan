@@ -5,6 +5,7 @@ from utils.getUserRole import getUserRole
 from utils.getUserProfile import getUserProfile
 from utils.addNewUser import addNewUser
 from utils.db_manager import delete_user_by_telegram_id, promote_user_to_manager
+from utils.registration_validation import validate_fio_parts, validate_team_code
 from keyboards import main_menu_keyboard, registration_position_keyboard, registration_grade_keyboard
 
 REG_POSITION_MAP = {
@@ -147,8 +148,9 @@ def start_handler(message):
 
 def reg_fio(message):
     parts = message.text.split()
-    if len(parts) < 2:
-        sent = bot.send_message(message.chat.id, "Укажите как минимум имя и фамилию.")
+    ok, err = validate_fio_parts(parts)
+    if not ok:
+        sent = bot.send_message(message.chat.id, err)
         bot.register_next_step_handler(sent, reg_fio)
         return
     registration_state[message.from_user.id] = {"ln": parts[0], "fn": parts[1], "mn": " ".join(parts[2:])}
@@ -157,6 +159,11 @@ def reg_fio(message):
 
 def reg_team(message):
     tid = message.from_user.id
+    ok, err = validate_team_code(message.text or "")
+    if not ok:
+        sent = bot.send_message(message.chat.id, err)
+        bot.register_next_step_handler(sent, reg_team)
+        return
     registration_state[tid]["team"] = message.text.strip()
     bot.send_message(
         message.chat.id,
