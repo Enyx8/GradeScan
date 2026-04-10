@@ -18,7 +18,12 @@ def team_report(message):
 
             query = """
                 SELECT u.id, u.last_name, u.first_name, u.grade,
-                (SELECT COUNT(*) FROM review r WHERE r.subject_id = u.id AND r.is_strange = TRUE) as anomalies
+                (SELECT COUNT(*) FROM review r
+                 WHERE r.subject_id = u.id AND r.is_strange = TRUE) AS anomalies,
+                (SELECT COUNT(*) FROM review r
+                 WHERE r.subject_id = u.id
+                   AND r.score IS NOT NULL
+                   AND r.is_strange = FALSE) AS usable_scores
                 FROM "user" u WHERE u.team_id = %s AND u.role = 'employee'
             """
             cursor.execute(query, (t_id,))
@@ -28,11 +33,22 @@ def team_report(message):
                 bot.send_message(message.chat.id, "В вашей команде пока нет сотрудников для оценки.")
                 return
 
-            text = "📋 **Сотрудники вашей команды:**\n\n"
+            text = (
+                "📋 **Сотрудники вашей команды:**\n\n"
+                "_✅ Ок — по сотруднику уже есть нормальные оценки для отчёта; "
+                "⏳ — как в отчёте: «пока нет оценок»; ⚠️ — есть отмеченные аномалии._\n\n"
+            )
             markup = types.InlineKeyboardMarkup()
             for m in members:
-                anomaly_text = f" (⚠️ {m[4]} аном.)" if m[4] > 0 else " (✅ Ок)"
-                text += f"• {m[1]} {m[2]} — `{m[3]}` {anomaly_text}\n"
+                anomalies = m[4]
+                usable_scores = m[5] or 0
+                if usable_scores == 0:
+                    status_text = " (⏳ Нет оценок)"
+                elif anomalies > 0:
+                    status_text = f" (⚠️ {anomalies} аном.)"
+                else:
+                    status_text = " (✅ Ок)"
+                text += f"• {m[1]} {m[2]} — `{m[3]}`{status_text}\n"
                 markup.add(types.InlineKeyboardButton(f"📊 Отчет: {m[1]}", callback_data=f"mgr_rpt:{m[0]}"))
             
             bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
@@ -72,7 +88,7 @@ def detailed_report(call):
     if result['recommended_grade'] == u_info[2]:
         report += "\n✅ Сотрудник соответствует текущему грейду."
     elif result['recommended_grade'] != u_info[2]:
-        report += f"\n🔥 Рекомендовано повышение до {result["recommended_grade"]}"
+        report += f"\n🔥 Рекомендовано повышение до {result['recommended_grade']}"
     
     bot.send_message(call.message.chat.id, report, parse_mode="Markdown")
     bot.answer_callback_query(call.id)

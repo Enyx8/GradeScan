@@ -45,7 +45,27 @@ docker compose up -d
 
 - поднимается контейнер `gradescan-postgres`
 - БД доступна на `localhost:5432`
-- схема из `sql/schema.sql` применится автоматически при первом запуске чистого тома
+- при **первом** запуске на пустом томе выполняются:
+  - `sql/schema.sql` — таблицы, индексы, `grade_matrix`, базовые навыки
+  - `sql/seed_team101.sql` — команда `101` и демо-коллеги (фиктивные `telegram_id` 91xxxxxxx) для кнопки «Оценить коллег»
+
+В `grade_matrix` поле `position_name` совпадает с тем, как код смотрит на строку `position` пользователя:
+
+- `backend` — флаг `backend` (Junior Java / Python backend — одна матрица)
+- `frontend` — флаг `frontend` (например Frontend React)
+- `devops` — флаг `devops`
+- `qa` — флаг `qa` (QA, в демо — «Data Scientist» через позицию `qa`)
+
+Если у тебя в БД осталась колонка `matrix_key` от старой версии, её можно убрать: `ALTER TABLE "user" DROP COLUMN IF EXISTS matrix_key;`
+
+Если БД уже была создана **до** обновления схемы, выполни в pgAdmin недостающие куски из `sql/schema.sql` и затем вручную:
+
+```sql
+-- пример: только демо-команда
+\i sql/seed_team101.sql
+```
+
+(в pgAdmin: открыть файл `sql/seed_team101.sql` и выполнить.)
 
 ### Проверка, что БД работает
 

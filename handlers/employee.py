@@ -1,7 +1,6 @@
 from bot_instance import bot
 from keyboards import colleague_list_keyboard, skills_keyboard, score_keyboard
-from utils.db_manager import get_team_members, save_review
-from utils.getUserProfile import getUserProfile
+from utils.db_manager import get_team_members, save_review, evaluation_target_for_subject
 
 @bot.message_handler(func=lambda m: m.text == "Оценить коллег")
 def list_colleagues(message):
@@ -9,12 +8,21 @@ def list_colleagues(message):
     if not members:
         bot.send_message(message.chat.id, "В Вашей команде пока нет никого, кроме вас.")
         return
-    bot.send_message(message.chat.id, "Выберите коллегу для оценки:", reply_markup=colleague_list_keyboard(members))
+    bot.send_message(
+        message.chat.id,
+        "Выберите коллегу для оценки (галочка — набран минимум по его профилю, не больше 8 компетенций):",
+        reply_markup=colleague_list_keyboard(members),
+    )
 
 @bot.callback_query_handler(func=lambda c: c.data == "back_to_team")
 def back_to_team(call):
     members = get_team_members(call.from_user.id)
-    bot.edit_message_text("Выберите коллегу:", call.message.chat.id, call.message.message_id, reply_markup=colleague_list_keyboard(members))
+    bot.edit_message_text(
+        "Выберите коллегу для оценки:",
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=colleague_list_keyboard(members),
+    )
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("sel_user:"))
 def select_skills(call):
@@ -23,11 +31,17 @@ def select_skills(call):
     members = get_team_members(call.from_user.id)
     target = next((m for m in members if m['id'] == user_id), None)
     
-    if target and target['skills_rated'] >= 4:
-        bot.answer_callback_query(call.id, "✅ Все оценки для этого коллеги уже выставлены!")
+    need = evaluation_target_for_subject(user_id) if target else 8
+    if target and target["skills_rated"] >= need:
+        bot.answer_callback_query(call.id, "✅ Уже оценено достаточно компетенций по этому коллеге!")
         return
 
-    bot.edit_message_text("Выберите компетенцию для оценки:", call.message.chat.id, call.message.message_id, reply_markup=skills_keyboard(user_id))
+    bot.edit_message_text(
+        "Выберите компетенцию для оценки (✅ — вы уже ответили по этому навыку):",
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=skills_keyboard(user_id, call.from_user.id),
+    )
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("sel_skill:"))
 def select_score(call):
@@ -45,8 +59,11 @@ def perform_rate(call):
     if success:
         bot.answer_callback_query(call.id, text="Оценка сохранена! ✅")
         # Возвращаем к списку навыков, чтобы человек мог оценить что-то еще
-        bot.edit_message_text("Компетенция оценена. Выберите следующую или вернитесь назад:", 
-                              call.message.chat.id, call.message.message_id, 
-                              reply_markup=skills_keyboard(subject_id))
+        bot.edit_message_text(
+            "Компетенция оценена. Выберите следующую или вернитесь назад:",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=skills_keyboard(subject_id, call.from_user.id),
+        )
     else:
         bot.answer_callback_query(call.id, text="Ошибка при сохранении ❌")

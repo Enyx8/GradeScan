@@ -61,22 +61,27 @@ def calculate_grade_conclusion(subject_id):
             if not user_stats:
                 return None
 
-            # Определяем позицию сотрудника
             cursor.execute("""
-                SELECT p.frontend, p.backend, p.devops, p.qa 
-                FROM "user" u 
-                JOIN position p ON u.position_id = p.id 
+                SELECT p.admins, p.frontend, p.backend, p.devops, p.qa
+                FROM "user" u
+                LEFT JOIN position p ON u.position_id = p.id
                 WHERE u.id = %s
             """, (subject_id,))
             pos_row = cursor.fetchone()
-            
-            pos_name = 'backend' # Default
+
+            pos_name = "backend"
             if pos_row:
-                flags = ['frontend', 'backend', 'devops', 'qa']
-                for i, flag in enumerate(pos_row):
-                    if flag: 
-                        pos_name = flags[i]
-                        break
+                adm, fe, be, dev, qa = pos_row
+                if adm:
+                    pos_name = "admins"
+                elif fe:
+                    pos_name = "frontend"
+                elif be:
+                    pos_name = "backend"
+                elif dev:
+                    pos_name = "devops"
+                elif qa:
+                    pos_name = "qa"
 
             # Алгоритм проверки грейда (от Senior к Junior)
             grades = ['Senior', 'Middle', 'Junior']
