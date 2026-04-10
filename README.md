@@ -1,8 +1,18 @@
+<p align="center">
+  <img src="docs/logo.png" alt="GradeScan" width="420">
+</p>
+
 # GradeScan
 
-Telegram-бот для оценки компетенций сотрудников (NEO.HACK 2026).
+Проект делали под хакатон **NEO.HACK 2026**. Идея простая: Telegram-бот, через который команда оценивает навыки коллег, а менеджер смотрит сводку по людям. Всё завязано на PostgreSQL (схема и сиды лежат в `sql/`).
 
-## 1) Локальный запуск (Python)
+Ниже — как поднять у себя и запустить.
+
+---
+
+## Установка и запуск
+
+### 1. Python и зависимости
 
 ```powershell
 python -m venv .venv
@@ -10,108 +20,69 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Создай `.env` на основе шаблона:
+### 2. Переменные окружения
+
+Скопируй шаблон и заполни значения (минимум токен бота и доступ к БД):
 
 ```powershell
 copy .env.example .env
 ```
 
-Заполни в `.env`:
+Нужны как минимум: `TELEGRAM_BOT_API`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
 
-- `TELEGRAM_BOT_API`
-- `DB_HOST`
-- `DB_PORT`
-- `DB_NAME`
-- `DB_USER`
-- `DB_PASSWORD`
+### 3. База (Docker)
 
-Запуск бота:
-
-```powershell
-python main.py
-```
-
-## 2) PostgreSQL через Docker (вариант для команды)
-
-Требуется Docker Desktop.
-
-### Запуск БД
+Если стоит Docker Desktop:
 
 ```powershell
 docker compose up -d
 ```
 
-Что происходит:
+При первом запуске на пустом томе подтянутся `sql/schema.sql` и `sql/seed_team101.sql` (команда `101` и тестовые коллеги с `telegram_id` вида `91xxxxxxx` — удобно клацать «Оценить коллег»).
 
-- поднимается контейнер `gradescan-postgres`
-- БД доступна на `localhost:5432`
-- при **первом** запуске на пустом томе выполняются:
-  - `sql/schema.sql` — таблицы, индексы, `grade_matrix`, базовые навыки
-  - `sql/seed_team101.sql` — команда `101` и демо-коллеги (фиктивные `telegram_id` 91xxxxxxx) для кнопки «Оценить коллег»
-
-В `grade_matrix` поле `position_name` совпадает с тем, как код смотрит на строку `position` пользователя:
-
-- `backend` — флаг `backend` (Junior Java / Python backend — одна матрица)
-- `frontend` — флаг `frontend` (например Frontend React)
-- `devops` — флаг `devops`
-- `qa` — флаг `qa` (QA, в демо — «Data Scientist» через позицию `qa`)
-
-Если у тебя в БД осталась колонка `matrix_key` от старой версии, её можно убрать: `ALTER TABLE "user" DROP COLUMN IF EXISTS matrix_key;`
-
-Если БД уже была создана **до** обновления схемы, выполни в pgAdmin недостающие куски из `sql/schema.sql` и затем вручную:
-
-```sql
--- пример: только демо-команда
-\i sql/seed_team101.sql
-```
-
-(в pgAdmin: открыть файл `sql/seed_team101.sql` и выполнить.)
-
-### Проверка, что БД работает
-
-```powershell
-docker compose ps
-docker compose logs -f postgres
-```
-
-### Остановить БД
-
-```powershell
-docker compose down
-```
-
-### Полный сброс БД (осторожно: удаляет данные)
+Полный сброс данных (осторожно):
 
 ```powershell
 docker compose down -v
 docker compose up -d
 ```
 
-## 3) Совместная работа в ветке
-
-### Ты (владелец текущей ветки)
+### 4. Запуск бота
 
 ```powershell
-git add .
-git commit -m "Add DB integration and Docker setup"
-git push -u origin feature/postgres-db
+python main.py
 ```
 
-### Друг (подключается к ветке)
+---
+
+## Полезное для команды
+
+Клон и ветка (пример):
 
 ```powershell
 git clone https://github.com/Enyx8/GradeScan
 cd GradeScan
 git fetch origin
-git checkout feature/postgres-db
+git checkout <нужная-ветка>
 ```
 
-Дальше у друга:
+Если схема БД уже жила до обновлений — догоняй недостающие куски из `sql/schema.sql` вручную в pgAdmin или через `psql`, потом при необходимости прогони `sql/seed_team101.sql`.
 
-1. `docker compose up -d`
-2. `copy .env.example .env`
-3. вписать токен в `.env`
-4. `python -m venv .venv`
-5. `.\.venv\Scripts\Activate.ps1`
-6. `python -m pip install -r requirements.txt`
-7. `python main.py`
+Если в старой версии осталась колонка `matrix_key` у `user`, её можно убрать:
+
+```sql
+ALTER TABLE "user" DROP COLUMN IF EXISTS matrix_key;
+```
+
+Проверка контейнера Postgres:
+
+```powershell
+docker compose ps
+docker compose logs -f postgres
+```
+
+Остановка:
+
+```powershell
+docker compose down
+```
